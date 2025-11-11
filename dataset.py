@@ -113,7 +113,9 @@ class MVTecDatasetOOD(torch.utils.data.Dataset):
             self.img_path = os.path.join(root, 'train')
         else:
             self.img_path = os.path.join(root, 'test')
-            self.gt_path = os.path.join('/home/cttri/anomaly/data/mvtec/'+_class_, 'ground_truth')
+            # 將 OOD 測試資料的 GT 指向對應 ID 資料集的 ground_truth
+            # 假設 ID 資料集位於 ./data/mvtec/<class>/ground_truth
+            self.gt_path = os.path.join('./data/mvtec', _class_, 'ground_truth')
         self.transform = transform
         self.gt_transform = gt_transform
         # load dataset

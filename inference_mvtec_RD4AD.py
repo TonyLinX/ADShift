@@ -55,8 +55,11 @@ def test_mvtec(_class_):
     decoder.load_state_dict(ckp['decoder'])
     bn.load_state_dict(ckp['bn'])
 
-    lamda = 0.5
+    # lamda = 0.5
 
+    lamda = 1.0
+
+    
     list_results = []
     auroc_sp = evaluation_ATTA(encoder, bn, decoder, test_dataloader_id, device,
                                                type_of_test='EFDM_test',

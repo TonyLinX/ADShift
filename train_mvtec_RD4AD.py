@@ -1,6 +1,7 @@
 import torch
 import os
 from datetime import datetime
+import argparse
 from torchvision.datasets import ImageFolder
 from resnet import wide_resnet50_2
 from de_resnet import de_wide_resnet50_2
@@ -58,14 +59,13 @@ def loss_concat(a, b):
     return loss
 
 
-def train(_class_):
+def train(_class_, device):
     print(_class_)
     epochs = 20
     learning_rate = 0.005
     batch_size = 16
     image_size = 256
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(device)
 
     # 準備日誌檔案
@@ -109,7 +109,6 @@ def train(_class_):
                                  betas=(0.5, 0.999))
 
 
-
     for epoch in range(epochs):
         bn.train()
         decoder.train()
@@ -117,8 +116,6 @@ def train(_class_):
         # 累積各項 loss 以計算每個 epoch 的平均
         loss_total_sum = 0.0
         loss_normal_sum = 0.0
-        loss_bn_sum = 0.0
-        loss_last_sum = 0.0
         batch_count = 0
         for normal, augmix_img, gray_img in train_dataloader:
             normal = normal.to(device)
@@ -136,14 +133,11 @@ def train(_class_):
             inputs_gray = encoder(gray_img)
             bn_gray = bn(inputs_gray)
 
-            loss_bn = loss_fucntion([bn_normal], [bn_augmix]) + loss_fucntion([bn_normal], [bn_gray])
-            outputs_gray = decoder(bn_gray)
-
-            loss_last = loss_fucntion_last(outputs_normal, outputs_augmix) + loss_fucntion_last(outputs_normal, outputs_gray)
-
             loss_normal = loss_fucntion(inputs_normal, outputs_normal)
-            loss = loss_normal*0.9 + loss_bn*0.05 + loss_last*0.05
-
+            # loss = loss_normal*0.9 + loss_bn*0.05 + loss_last*0.05
+            
+            loss = loss_normal
+            
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -151,21 +145,17 @@ def train(_class_):
             # 累積 batch loss
             loss_total_sum += loss.item()
             loss_normal_sum += loss_normal.item()
-            loss_bn_sum += loss_bn.item()
-            loss_last_sum += loss_last.item()
             batch_count += 1
 
         # 計算 epoch 平均 loss 並寫入日誌
         if batch_count > 0:
             avg_loss = loss_total_sum / batch_count
             avg_loss_normal = loss_normal_sum / batch_count
-            avg_loss_bn = loss_bn_sum / batch_count
-            avg_loss_last = loss_last_sum / batch_count
         else:
-            avg_loss = avg_loss_normal = avg_loss_bn = avg_loss_last = 0.0
+            avg_loss = avg_loss_normal = 0.0
 
         msg = (f"Epoch [{epoch+1}/{epochs}] avg_loss={avg_loss:.6f} "
-               f"normal={avg_loss_normal:.6f} bn={avg_loss_bn:.6f} last={avg_loss_last:.6f}")
+               f"normal={avg_loss_normal:.6f}")
         print(msg)
         with open(log_path, 'a') as f:
             f.write(msg + "\n")
@@ -185,7 +175,16 @@ def train(_class_):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Train RD4AD on MVTec')
+    parser.add_argument('--gpu', type=int, default=0, help='要使用的 GPU 編號；設為 -1 則用 CPU')
+    args = parser.parse_args()
+
+    if args.gpu is not None and args.gpu >= 0 and torch.cuda.is_available():
+        device = torch.device(f'cuda:{args.gpu}')
+    else:
+        device = torch.device('cpu')
+
     item_list = ['carpet', 'leather', 'grid', 'tile', 'wood', 'bottle', 'hazelnut', 'cable', 'capsule',
                   'pill', 'transistor', 'metal_nut', 'screw', 'toothbrush', 'zipper']
     for i in item_list:
-        train(i)
+        train(i, device)

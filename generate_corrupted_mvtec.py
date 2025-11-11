@@ -6,10 +6,11 @@ from imagecorruptions import corrupt
 import numpy as np
 item_list = ['carpet', 'bottle', 'hazelnut', 'leather', 'cable', 'capsule', 'grid', 'pill',
              'transistor', 'metal_nut', 'screw', 'toothbrush', 'zipper', 'tile', 'wood']
+
 for type_cor in ['brightness','contrast','defocus_blur','gaussian_noise']:
     for _class_ in item_list:
-        path_orginal = './mvtec/' + _class_ + '/' + 'test' #path to the test set of original mvtec 
-        path = './mvtec_'+type_cor+'/' + _class_ + '/' + 'test' #path to the corrupted mvtec 
+        path_orginal = './data/mvtec_anomaly_detection/' + _class_ + '/' + 'test' #path to the test set of original mvtec 
+        path = './data/mvtec_'+type_cor+'/' + _class_ + '/' + 'test' #path to the corrupted mvtec 
         isExist = os.path.exists(path)
         if not isExist:
             os.makedirs(path)
@@ -17,7 +18,7 @@ for type_cor in ['brightness','contrast','defocus_blur','gaussian_noise']:
         type_sets = glob.glob(path_orginal+'/*/')
         for type in type_sets:
             path_type = type
-            path_type_new = path_type.replace('mvtec', 'mvtec_'+type_cor)
+            path_type_new = path_type.replace('mvtec_anomaly_detection', 'mvtec_'+type_cor)
             print(path_type_new)
             isExist = os.path.exists(path_type_new)
             if not isExist:
@@ -31,5 +32,5 @@ for type_cor in ['brightness','contrast','defocus_blur','gaussian_noise']:
                 image = np.array(image)
                 corrupted = corrupt(image, corruption_name=type_cor, severity=3)
                 im = Image.fromarray(corrupted)
-                im.save(path_to_image.replace('mvtec', 'mvtec_'+type_cor))
+                im.save(path_to_image.replace('mvtec_anomaly_detection', 'mvtec_'+type_cor))
 

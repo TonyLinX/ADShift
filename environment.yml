@@ -1,4 +1,4 @@
-name: py37
+name: adshift
 channels:
   - defaults
 dependencies:
@@ -21,6 +21,8 @@ dependencies:
   - tk=8.6.12=h1ccaba5_0
   - xz=5.2.6=h5eee18b_0
   - zlib=1.2.13=h5eee18b_0
+  - numpy=1.20.3
+  - wheel=0.38.4
   - pip:
     - absl-py==1.3.0
     - alfred-py==3.0.1
@@ -30,7 +32,7 @@ dependencies:
     - botocore==1.29.37
     - cachetools==5.2.0
     - charset-normalizer==2.1.1
-    - click==7.1.2
+    - click==8.0.4
     - cloudpickle==2.2.0
     - colorama==0.4.6
     - commonmark==0.9.1
@@ -162,4 +164,4 @@ dependencies:
     - xdg==5.1.1
     - yacs==0.1.8
     - zipp==3.10.0
-prefix: /home/cttri/anaconda3/envs/py37
+prefix: /home/cttri/anaconda3/envs/adshift
