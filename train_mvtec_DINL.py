@@ -1,3 +1,4 @@
+import argparse
 import torch
 import os
 from datetime import datetime
@@ -7,6 +8,7 @@ from de_resnet import de_wide_resnet50_2
 from torch.nn import functional as F
 import torchvision.transforms as transforms
 from dataset import AugMixDatasetMVTec
+from seed_utils import set_seed, seed_worker, build_generator
 
 
 def count_parameters(model):
@@ -58,22 +60,23 @@ def loss_concat(a, b):
     return loss
 
 
-def train(_class_):
+def train(_class_, device, seed, num_workers):
     print(_class_)
     epochs = 20
     learning_rate = 0.005
     batch_size = 16
     image_size = 256
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(device)
 
     # 準備日誌檔案
     log_dir = './logs'
     os.makedirs(log_dir, exist_ok=True)
-    log_path = os.path.join(log_dir, f"mvtec_DINL_{_class_}_" + datetime.now().strftime('%Y%m%d-%H%M%S') + ".log")
+    log_path = os.path.join(
+        log_dir,
+        f"mvtec_DINL_{_class_}_seed{seed}_" + datetime.now().strftime('%Y%m%d-%H%M%S') + ".log")
     with open(log_path, 'w') as f:
-        f.write(f"class={_class_}, device={device}\n")
+        f.write(f"class={_class_}, device={device}, seed={seed}\n")
         f.write(f"epochs={epochs}, lr={learning_rate}, batch_size={batch_size}, image_size={image_size}\n")
 
     # 準備 checkpoint 目錄
@@ -96,7 +99,14 @@ def train(_class_):
     train_path = './data/mvtec/' + _class_ + '/train' #update here
     train_data = ImageFolder(root=train_path, transform=resize_transform)
     train_data = AugMixDatasetMVTec(train_data, preprocess)
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    train_dataloader = torch.utils.data.DataLoader(
+        train_data,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        worker_init_fn=seed_worker,
+        generator=build_generator(seed),
+        pin_memory=(device.type == 'cuda'))
 
     encoder, bn = wide_resnet50_2(pretrained=True)
     encoder = encoder.to(device)
@@ -185,7 +195,20 @@ def train(_class_):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Train DINL on MVTec')
+    parser.add_argument('--gpu', type=int, default=0, help='要使用的 GPU 編號；設為 -1 則用 CPU')
+    parser.add_argument('--seed', type=int, default=0, help='Random seed for reproducibility')
+    parser.add_argument('--num-workers', type=int, default=0, help='DataLoader worker count')
+    args = parser.parse_args()
+
+    if args.gpu is not None and args.gpu >= 0 and torch.cuda.is_available():
+        device = torch.device(f'cuda:{args.gpu}')
+    else:
+        device = torch.device('cpu')
+
+    set_seed(args.seed)
+
     item_list = ['carpet', 'leather', 'grid', 'tile', 'wood', 'bottle', 'hazelnut', 'cable', 'capsule',
                   'pill', 'transistor', 'metal_nut', 'screw', 'toothbrush', 'zipper']
     for i in item_list:
-        train(i)
+        train(i, device, args.seed, args.num_workers)
